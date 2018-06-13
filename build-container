@@ -1,0 +1,4 @@
+GOOS=linux bash build
+docker build -t yinwoods/scheduler:0.1.0 .
+docker push yinwoods/scheduler:0.1.0
+rm scheduler

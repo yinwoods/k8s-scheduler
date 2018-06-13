@@ -13,18 +13,6 @@ kubectl proxy
 Starting to serve on 127.0.0.1:8080
 ```
 
-```
-go run annotator/main.go
-```
-```
-gke-k0-default-pool-728d327f-00lq 1.60
-gke-k0-default-pool-728d327f-3vzg 0.20
-gke-k0-default-pool-728d327f-nmz7 0.80
-gke-k0-default-pool-728d327f-pxee 0.05
-gke-k0-default-pool-728d327f-xm4i 0.05
-gke-k0-default-pool-728d327f-zynj 0.20
-```
-
 ### Create a deployment
 
 ```

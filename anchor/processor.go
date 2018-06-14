@@ -85,19 +85,3 @@ func schedulePod(pod *Pod) error {
 	return nil
 }
 
-// 调度多个pod
-func schedulePods() error {
-	processorLock.Lock()
-	defer processorLock.Unlock()
-	pods, err := getUnscheduledPods()
-	if err != nil {
-		return err
-	}
-	for _, pod := range pods {
-		err := schedulePod(pod)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	return nil
-}

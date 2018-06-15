@@ -82,14 +82,14 @@ func getNodes() (*NodeList, error) {
 	request.Header.Set("Accept", "application/json, */*")
 
 	resp, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
 	err = json.NewDecoder(resp.Body).Decode(&nodeList)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
 	return &nodeList, nil
 }
@@ -206,96 +206,123 @@ func getPods() (*PodList, error) {
 	request.Header.Set("Accept", "application/json, */*")
 
 	resp, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 	err = json.NewDecoder(resp.Body).Decode(&podList)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 	return &podList, nil
 }
 
 type ResourceUsage struct {
 	CPU int
+    Memory int
+    Disk int
+    Pods int
 }
 
-func fit(pod *Pod) ([]Node, error) {
+func parseCpu(resource ResourceList) int {
+    if cpu, errs := resource["cpu"]; errs {
+        if strings.HasSuffix(cpu, "m") {
+            milliCores := strings.TrimSuffix(cpu, "m")
+            cores, err := strconv.Atoi(milliCores)
+            checkError(err)
+            return cores
+        }
+        if cores, err := strconv.ParseFloat(cpu, 32); err == nil {
+            checkError(err)
+            return int(cores * 1000)
+        }
+    }
+    return 0
+}
+
+func parseMemory(resource ResourceList) int {
+    if memory, errs := resource["memory"]; errs {
+        if strings.HasSuffix(memory, "Ki") {
+            mem := strings.TrimSuffix(memory, "Ki")
+            m, err := strconv.Atoi(mem)
+            checkError(err)
+            return m
+        }
+    }
+    if memory, errs := resource["memory"]; errs {
+        if strings.HasSuffix(memory, "Mi") {
+            mem := strings.TrimSuffix(memory, "Mi")
+            m, err := strconv.Atoi(mem)
+            checkError(err)
+            return m * 1024
+        }
+    }
+    return 0
+}
+
+func predicate(pod *Pod) ([]Node, error) {
     // 获取所有节点
 	nodeList, err := getNodes()
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
     // 获取所有pod
 	podList, err := getPods()
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
 	resourceUsage := make(map[string]*ResourceUsage)
 	for _, node := range nodeList.Items {
 		resourceUsage[node.Metadata.Name] = &ResourceUsage{}
 	}
 
-    // 统计各个各个节点已用资源总量
+    // 统计各个各个节点上pod已用资源总量
 	for _, p := range podList.Items {
 		if p.Spec.NodeName == "" {
 			continue
 		}
 		for _, c := range p.Spec.Containers {
-			if strings.HasSuffix(c.Resources.Requests["cpu"], "m") {
-				milliCores := strings.TrimSuffix(c.Resources.Requests["cpu"], "m")
-				cores, err := strconv.Atoi(milliCores)
-				if err != nil {
-					return nil, err
-				}
-				ru := resourceUsage[p.Spec.NodeName]
-				ru.CPU += cores
-			}
+            cores := parseCpu(c.Resources.Requests)
+            memorys := parseMemory(c.Resources.Requests)
+
+            ru := resourceUsage[p.Spec.NodeName]
+		    ru.CPU += cores
+            ru.Memory += memorys
 		}
 	}
 
 	var nodes []Node
-	fitFailures := make([]string, 0)
+	predicateFailures := make([]string, 0)
 
-	var spaceRequired int
+	var resourceRequired ResourceUsage
+    var resourceFree ResourceUsage
+    var resourceAllocatable ResourceUsage
+
     // 统计待调度pod所需资源总量
 	for _, c := range pod.Spec.Containers {
-		if strings.HasSuffix(c.Resources.Requests["cpu"], "m") {
-			milliCores := strings.TrimSuffix(c.Resources.Requests["cpu"], "m")
-			cores, err := strconv.Atoi(milliCores)
-			if err != nil {
-				return nil, err
-			}
-			spaceRequired += cores
-		}
+        cores := parseCpu(c.Resources.Requests)
+        memorys := parseMemory(c.Resources.Requests)
+
+	    resourceRequired.CPU += cores
+        resourceRequired.Memory += memorys
 	}
 
 	for _, node := range nodeList.Items {
-		var allocatableCores int
-		var err error
-        // allocatableCores 统计各个节点可分配资源总量
-		if strings.HasSuffix(node.Status.Allocatable["cpu"], "m") {
-			milliCores := strings.TrimSuffix(node.Status.Allocatable["cpu"], "m")
-			allocatableCores, err = strconv.Atoi(milliCores)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			cpu := node.Status.Allocatable["cpu"]
-			cpuFloat, err := strconv.ParseFloat(cpu, 32)
-			if err != nil {
-				return nil, err
-			}
-			allocatableCores = int(cpuFloat * 1000)
-		}
+        // resourceAllocatable 统计各个节点可分配资源总量
+        resourceAllocatable.CPU = parseCpu(node.Status.Allocatable)
+        resourceAllocatable.Memory = parseMemory(node.Status.Allocatable)
 
         // 统计各个节点可用空闲资源总量
-		freeSpace := (allocatableCores - resourceUsage[node.Metadata.Name].CPU)
-		if freeSpace < spaceRequired {
+		resourceFree.CPU = (resourceAllocatable.CPU - resourceUsage[node.Metadata.Name].CPU)
+        resourceFree.Memory = (resourceAllocatable.Memory - resourceUsage[node.Metadata.Name].Memory)
+        fmt.Println(resourceAllocatable)
+        fmt.Println(resourceUsage[node.Metadata.Name])
+        fmt.Println(resourceFree)
+
+		if resourceFree.CPU < resourceRequired.CPU {
 			m := fmt.Sprintf("fit failure on node (%s): Insufficient CPU", node.Metadata.Name)
-			fitFailures = append(fitFailures, m)
+			predicateFailures = append(predicateFailures, m)
 			continue
 		}
 		nodes = append(nodes, node)
@@ -306,7 +333,7 @@ func fit(pod *Pod) ([]Node, error) {
 		timestamp := time.Now().UTC().Format(time.RFC3339)
 		event := Event{
 			Count:          1,
-			Message:        fmt.Sprintf("pod (%s) failed to fit in any node\n%s", pod.Metadata.Name, strings.Join(fitFailures, "\n")),
+			Message:        fmt.Sprintf("pod (%s) failed to fit in any node\n%s", pod.Metadata.Name, strings.Join(predicateFailures, "\n")),
 			Metadata:       Metadata{GenerateName: pod.Metadata.Name + "-"},
 			Reason:         "FailedScheduling",
 			LastTimestamp:  timestamp,

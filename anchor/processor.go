@@ -63,7 +63,7 @@ func monitorUnscheduledPods(done chan struct{}, wg *sync.WaitGroup) {
 }
 
 func schedulePod(pod *Pod) error {
-	nodes, err := fit(pod)
+	nodes, err := predicate(pod)
 	if err != nil {
 		return err
 	}

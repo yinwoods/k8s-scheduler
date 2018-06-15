@@ -15,109 +15,109 @@ package main
 
 // Event is a report of an event somewhere in the cluster.
 type Event struct {
-	ApiVersion     string          `json:"apiVersion,omitempty"`
-	Count          int64           `json:"count,omitempty"`
-	FirstTimestamp string          `json:"firstTimestamp"`
-	LastTimestamp  string          `json:"lastTimestamp"`
-	InvolvedObject ObjectReference `json:"involvedObject"`
-	Kind           string          `json:"kind,omitempty"`
-	Message        string          `json:"message,omitempty"`
-	Metadata       Metadata        `json:"metadata"`
-	Reason         string          `json:"reason,omitempty"`
-	Source         EventSource     `json:"source,omitempty"`
-	Type           string          `json:"type,omitempty"`
+    ApiVersion     string          `json:"apiVersion,omitempty"`
+    Count          int64           `json:"count,omitempty"`
+    FirstTimestamp string          `json:"firstTimestamp"`
+    LastTimestamp  string          `json:"lastTimestamp"`
+    InvolvedObject ObjectReference `json:"involvedObject"`
+    Kind           string          `json:"kind,omitempty"`
+    Message        string          `json:"message,omitempty"`
+    Metadata       Metadata        `json:"metadata"`
+    Reason         string          `json:"reason,omitempty"`
+    Source         EventSource     `json:"source,omitempty"`
+    Type           string          `json:"type,omitempty"`
 }
 
 // EventSource contains information for an event.
 type EventSource struct {
-	Component string `json:"component,omitempty"`
-	Host      string `json:"host,omitempty"`
+    Component string `json:"component,omitempty"`
+    Host      string `json:"host,omitempty"`
 }
 
 // ObjectReference contains enough information to let you inspect or modify
 // the referred object.
 type ObjectReference struct {
-	ApiVersion string `json:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
-	Uid        string `json:"uid"`
+    ApiVersion string `json:"apiVersion,omitempty"`
+    Kind       string `json:"kind,omitempty"`
+    Name       string `json:"name,omitempty"`
+    Namespace  string `json:"namespace,omitempty"`
+    Uid        string `json:"uid"`
 }
 
 // PodList is a list of Pods.
 type PodList struct {
-	ApiVersion string       `json:"apiVersion"`
-	Kind       string       `json:"kind"`
-	Metadata   ListMetadata `json:"metadata"`
-	Items      []Pod        `json:"items"`
+    ApiVersion string       `json:"apiVersion"`
+    Kind       string       `json:"kind"`
+    Metadata   ListMetadata `json:"metadata"`
+    Items      []Pod        `json:"items"`
 }
 
 type PodWatchEvent struct {
-	Type   string `json:"type"`
-	Object Pod    `json:"object"`
+    Type   string `json:"type"`
+    Object Pod    `json:"object"`
 }
 
 type Pod struct {
-	Kind     string   `json:"kind,omitempty"`
-	Metadata Metadata `json:"metadata"`
-	Spec     PodSpec  `json:"spec"`
+    Kind     string   `json:"kind,omitempty"`
+    Metadata Metadata `json:"metadata"`
+    Spec     PodSpec  `json:"spec"`
 }
 
 type PodSpec struct {
-	NodeName   string      `json:"nodeName"`
-	Containers []Container `json:"containers"`
+    NodeName   string      `json:"nodeName"`
+    Containers []Container `json:"containers"`
 }
 
 type Container struct {
-	Name      string               `json:"name"`
-	Resources ResourceRequirements `json:"resources"`
+    Name      string               `json:"name"`
+    Resources ResourceRequirements `json:"resources"`
 }
 
 type ResourceRequirements struct {
-	Limits   ResourceList `json:"limits"`
-	Requests ResourceList `json:"requests"`
+    Limits   ResourceList `json:"limits"`
+    Requests ResourceList `json:"requests"`
 }
 
 type ResourceList map[string]string
 
 type Binding struct {
-	ApiVersion string   `json:"apiVersion"`
-	Kind       string   `json:"kind"`
-	Target     Target   `json:"target"`
-	Metadata   Metadata `json:"metadata"`
+    ApiVersion string   `json:"apiVersion"`
+    Kind       string   `json:"kind"`
+    Target     Target   `json:"target"`
+    Metadata   Metadata `json:"metadata"`
 }
 
 type Target struct {
-	ApiVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
-	Name       string `json:"name"`
+    ApiVersion string `json:"apiVersion"`
+    Kind       string `json:"kind"`
+    Name       string `json:"name"`
 }
 
 type NodeList struct {
-	ApiVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
-	Items      []Node
+    ApiVersion string `json:"apiVersion"`
+    Kind       string `json:"kind"`
+    Items      []Node
 }
 
 type Node struct {
-	Metadata Metadata   `json:"metadata"`
-	Status   NodeStatus `json:"status"`
+    Metadata Metadata   `json:"metadata"`
+    Status   NodeStatus `json:"status"`
 }
 
 type NodeStatus struct {
-	Capacity    ResourceList `json:"capacity"`
-	Allocatable ResourceList `json:"allocatable"`
+    Capacity    ResourceList `json:"capacity"`
+    Allocatable ResourceList `json:"allocatable"`
 }
 
 type ListMetadata struct {
-	ResourceVersion string `json:"resourceVersion"`
+    ResourceVersion string `json:"resourceVersion"`
 }
 
 type Metadata struct {
-	Name            string            `json:"name"`
-	GenerateName    string            `json:"generateName"`
-	ResourceVersion string            `json:"resourceVersion"`
-	Labels          map[string]string `json:"labels"`
-	Annotations     map[string]string `json:"annotations"`
-	Uid             string            `json:"uid"`
+    Name            string            `json:"name"`
+    GenerateName    string            `json:"generateName"`
+    ResourceVersion string            `json:"resourceVersion"`
+    Labels          map[string]string `json:"labels"`
+    Annotations     map[string]string `json:"annotations"`
+    Uid             string            `json:"uid"`
 }

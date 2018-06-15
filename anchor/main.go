@@ -14,39 +14,39 @@
 package main
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
+    "log"
+    "os"
+    "os/signal"
+    "sync"
+    "syscall"
 )
 
 const schedulerName = "hightower"
 
 func main() {
-	log.Println("Starting custom scheduler...")
+    log.Println("Starting custom scheduler...")
 
-	doneChan := make(chan struct{})
-	var wg sync.WaitGroup
+    doneChan := make(chan struct{})
+    var wg sync.WaitGroup
 
-	wg.Add(1)
+    wg.Add(1)
     // 监测待调度的pod并调度
-	go monitorUnscheduledPods(doneChan, &wg)
+    go monitorUnscheduledPods(doneChan, &wg)
 
-	wg.Add(1)
+    wg.Add(1)
     // 轮询尝试再次调度
-	go reconcileUnscheduledPods(30, doneChan, &wg)
+    go reconcileUnscheduledPods(30, doneChan, &wg)
 
     // 注册信号，当程序终结时传递信号到signalChan，接着做善后工作
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	for {
-		select {
-		case <-signalChan:
-			log.Printf("Shutdown signal received, exiting...")
-			close(doneChan)
-			wg.Wait()
-			os.Exit(0)
-		}
-	}
+    signalChan := make(chan os.Signal, 1)
+    signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+    for {
+        select {
+        case <-signalChan:
+            log.Printf("Shutdown signal received, exiting...")
+            close(doneChan)
+            wg.Wait()
+            os.Exit(0)
+        }
+    }
 }

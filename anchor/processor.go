@@ -14,74 +14,74 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"sync"
-	"time"
+    "fmt"
+    "log"
+    "sync"
+    "time"
 )
 
 var processorLock = &sync.Mutex{}
 
 // 再次调度，调度多个未调度的pod
 func reconcileUnscheduledPods(interval int, done chan struct{}, wg *sync.WaitGroup) {
-	for {
-		select {
-		case <-time.After(time.Duration(interval) * time.Second):
-			err := schedulePods()
-			if err != nil {
-				log.Println(err)
-			}
-		case <-done:
-			wg.Done()
-			log.Println("Stopped reconciliation loop.")
-			return
-		}
-	}
+    for {
+        select {
+        case <-time.After(time.Duration(interval) * time.Second):
+            err := schedulePods()
+            if err != nil {
+                log.Println(err)
+            }
+        case <-done:
+            wg.Done()
+            log.Println("Stopped reconciliation loop.")
+            return
+        }
+    }
 }
 
 func monitorUnscheduledPods(done chan struct{}, wg *sync.WaitGroup) {
-	pods, errc := watchUnscheduledPods()
+    pods, errc := watchUnscheduledPods()
 
-	for {
-		select {
-		case err := <-errc:
-			log.Println(err)
-		case pod := <-pods:
-			processorLock.Lock()
-			time.Sleep(2 * time.Second)
-			err := schedulePod(&pod)
-			if err != nil {
-				log.Println(err)
-			}
-			processorLock.Unlock()
-		case <-done:
-			wg.Done()
-			log.Println("Stopped scheduler.")
-			return
-		}
-	}
+    for {
+        select {
+        case err := <-errc:
+            log.Println(err)
+        case pod := <-pods:
+            processorLock.Lock()
+            time.Sleep(2 * time.Second)
+            err := schedulePod(&pod)
+            if err != nil {
+                log.Println(err)
+            }
+            processorLock.Unlock()
+        case <-done:
+            wg.Done()
+            log.Println("Stopped scheduler.")
+            return
+        }
+    }
 }
 
 func schedulePod(pod *Pod) error {
-	nodes, err := predicate(pod)
-	if err != nil {
-		return err
-	}
+    nodes, err := predicate(pod)
+    if err != nil {
+        return err
+    }
     // 无节点能够满足该pod运行所需资源
-	if len(nodes) == 0 {
-		return fmt.Errorf("Unable to schedule pod (%s) failed to fit in any node", pod.Metadata.Name)
-	}
+    if len(nodes) == 0 {
+        return fmt.Errorf("Unable to schedule pod (%s) failed to fit in any node", pod.Metadata.Name)
+    }
 
     // 选出price最小的节点
-	node, err := bestNode(nodes)
-	if err != nil {
-		return err
-	}
+    node, err := bestNode(nodes)
+    if err != nil {
+        return err
+    }
     // 调度节点
-	err = bind(pod, node)
-	if err != nil {
-		return err
-	}
-	return nil
+    err = bind(pod, node)
+    if err != nil {
+        return err
+    }
+    return nil
 }
 

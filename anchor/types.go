@@ -96,7 +96,7 @@ type Target struct {
 type NodeList struct {
     ApiVersion string `json:"apiVersion"`
     Kind       string `json:"kind"`
-    Items      []Node
+    Items      []*Node
 }
 
 type Node struct {
@@ -123,7 +123,7 @@ type Metadata struct {
 }
 
 type ResourceUsage struct {
-    CPU int
-    Memory int
-    Pod int
+    CPU int64
+    Memory int64
+    Pod int64
 }

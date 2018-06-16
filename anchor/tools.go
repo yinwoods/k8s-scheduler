@@ -10,6 +10,15 @@ import (
     "io/ioutil"
 )
 
+var (
+    apiHost           = "127.0.0.1:8080"
+    bindingsEndpoint  = "/api/v1/namespaces/default/pods/%s/binding/"
+    eventsEndpoint    = "/api/v1/namespaces/default/events"
+    nodesEndpoint     = "/api/v1/nodes"
+    podsEndpoint      = "/api/v1/pods"
+    watchPodsEndpoint = "/api/v1/watch/pods"
+)
+
 func postEvent(event Event) error {
     var b []byte
     body := bytes.NewBuffer(b)
@@ -40,16 +49,6 @@ func postEvent(event Event) error {
     }
     return nil
 }
-
-
-var (
-    apiHost           = "127.0.0.1:8080"
-    bindingsEndpoint  = "/api/v1/namespaces/default/pods/%s/binding/"
-    eventsEndpoint    = "/api/v1/namespaces/default/events"
-    nodesEndpoint     = "/api/v1/nodes"
-    podsEndpoint      = "/api/v1/pods"
-    watchPodsEndpoint = "/api/v1/watch/pods"
-)
 
 func getNodes() (*NodeList, error) {
     var nodeList NodeList
@@ -122,7 +121,13 @@ func errPrintln(err error, msg string) {
     }
 }
 
-func printResourceUsage(ru ResourceUsage, node Node, msg string) {
+func printResourceUsage(ru ResourceUsage, node *Node, msg string) {
     log.Print("node - " + node.Metadata.Name + "\t" + msg + ":\t")
     log.Printf("CPU: [%d] Memory: [%d] Pod: [%d]\n", ru.CPU, ru.Memory, ru.Pod)
+}
+
+func printNodeScores(nodeScore map[*Node]int64) {
+    for node, score := range nodeScore {
+        log.Printf("node [%s] got score: [%d]\n", node.Metadata.Name, score)
+    }
 }

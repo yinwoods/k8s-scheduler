@@ -1,10 +1,5 @@
 package main
 
-/*
-TODO
-Add Algorithm
-now it's choosed by ip
-*/
 const MaxPriority = 10
 
 func balancedResourceScore(requested, allocatable ResourceUsage) int64 {

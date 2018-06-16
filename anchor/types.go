@@ -121,3 +121,9 @@ type Metadata struct {
     Annotations     map[string]string `json:"annotations"`
     Uid             string            `json:"uid"`
 }
+
+type ResourceUsage struct {
+    CPU int
+    Memory int
+    Pod int
+}

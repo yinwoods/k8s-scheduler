@@ -1,15 +1,3 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package main
 
@@ -27,212 +15,16 @@ import (
     "time"
 )
 
-var (
-    apiHost           = "127.0.0.1:8080"
-    bindingsEndpoint  = "/api/v1/namespaces/default/pods/%s/binding/"
-    eventsEndpoint    = "/api/v1/namespaces/default/events"
-    nodesEndpoint     = "/api/v1/nodes"
-    podsEndpoint      = "/api/v1/pods"
-    watchPodsEndpoint = "/api/v1/watch/pods"
-)
-
-func postEvent(event Event) error {
-    var b []byte
-    body := bytes.NewBuffer(b)
-    err := json.NewEncoder(body).Encode(event)
-    if err != nil {
-        return err
-    }
-
-    request := &http.Request{
-        Body:          ioutil.NopCloser(body),
-        ContentLength: int64(body.Len()),
-        Header:        make(http.Header),
-        Method:        http.MethodPost,
-        URL: &url.URL{
-            Host:   apiHost,
-            Path:   eventsEndpoint,
-            Scheme: "http",
-        },
-    }
-    request.Header.Set("Content-Type", "application/json")
-
-    resp, err := http.DefaultClient.Do(request)
-    if err != nil {
-        return err
-    }
-    if resp.StatusCode != 201 {
-        return errors.New("Event: Unexpected HTTP status code" + resp.Status)
-    }
-    return nil
-}
-
-func getNodes() (*NodeList, error) {
-    var nodeList NodeList
-
-    request := &http.Request{
-        Header: make(http.Header),
-        Method: http.MethodGet,
-        URL: &url.URL{
-            Host:   apiHost,
-            Path:   nodesEndpoint,
-            Scheme: "http",
-        },
-    }
-    request.Header.Set("Accept", "application/json, */*")
-
-    resp, err := http.DefaultClient.Do(request)
-    if err != nil {
-        return nil, err
-    }
-
-    err = json.NewDecoder(resp.Body).Decode(&nodeList)
-    if err != nil {
-        return nil, err
-    }
-
-    return &nodeList, nil
-}
-
-func watchUnscheduledPods() (<-chan Pod, <-chan error) {
-    pods := make(chan Pod)
-    errc := make(chan error, 1)
-
-    v := url.Values{}
-    v.Set("fieldSelector", "spec.nodeName=")
-
-    request := &http.Request{
-        Header: make(http.Header),
-        Method: http.MethodGet,
-        URL: &url.URL{
-            Host:     apiHost,
-            Path:     watchPodsEndpoint,
-            RawQuery: v.Encode(),
-            Scheme:   "http",
-        },
-    }
-    request.Header.Set("Accept", "application/json, */*")
-
-    go func() {
-        for {
-            resp, err := http.DefaultClient.Do(request)
-            // 出错重传
-            if err != nil {
-                errc <- err
-                time.Sleep(5 * time.Second)
-                continue
-            }
-
-            if resp.StatusCode != 200 {
-                errc <- errors.New("Invalid status code: " + resp.Status)
-                time.Sleep(5 * time.Second)
-                continue
-            }
-
-            decoder := json.NewDecoder(resp.Body)
-            for {
-                var event PodWatchEvent
-                err = decoder.Decode(&event)
-                if err != nil {
-                    errc <- err
-                    break
-                }
-
-                if event.Type == "ADDED" {
-                    pods <- event.Object
-                }
-            }
-        }
-    }()
-
-    return pods, errc
-}
-
-func getUnscheduledPods() ([]*Pod, error) {
-    // 获取调度器下未调度的pod
-    var podList PodList
-    unscheduledPods := make([]*Pod, 0)
-
-    v := url.Values{}
-    v.Set("fieldSelector", "spec.nodeName=")
-
-    request := &http.Request{
-        Header: make(http.Header),
-        Method: http.MethodGet,
-        URL: &url.URL{
-            Host:     apiHost,
-            Path:     podsEndpoint,
-            RawQuery: v.Encode(),
-            Scheme:   "http",
-        },
-    }
-    request.Header.Set("Accept", "application/json, */*")
-
-    resp, err := http.DefaultClient.Do(request)
-    if err != nil {
-        return unscheduledPods, err
-    }
-    err = json.NewDecoder(resp.Body).Decode(&podList)
-    if err != nil {
-        return unscheduledPods, err
-    }
-
-    for _, pod := range podList.Items {
-        if pod.Metadata.Annotations["scheduler.alpha.kubernetes.io/name"] == schedulerName {
-            unscheduledPods = append(unscheduledPods, &pod)
-        }
-    }
-
-    return unscheduledPods, nil
-}
-
-func getPods() (*PodList, error) {
-    var podList PodList
-
-    v := url.Values{}
-    v.Add("fieldSelector", "status.phase=Running")
-    v.Add("fieldSelector", "status.phase=Pending")
-
-    request := &http.Request{
-        Header: make(http.Header),
-        Method: http.MethodGet,
-        URL: &url.URL{
-            Host:     apiHost,
-            Path:     podsEndpoint,
-            RawQuery: v.Encode(),
-            Scheme:   "http",
-        },
-    }
-    request.Header.Set("Accept", "application/json, */*")
-
-    resp, err := http.DefaultClient.Do(request)
-    if err != nil {
-        return nil, err
-    }
-    err = json.NewDecoder(resp.Body).Decode(&podList)
-    if err != nil {
-        return nil, err
-    }
-    return &podList, nil
-}
-
-type ResourceUsage struct {
-    CPU int
-    Memory int
-    Disk int
-    Pods int
-}
-
 func parseCpu(resource ResourceList) int {
     if cpu, errs := resource["cpu"]; errs {
         if strings.HasSuffix(cpu, "m") {
             milliCores := strings.TrimSuffix(cpu, "m")
             cores, err := strconv.Atoi(milliCores)
-            checkError(err)
+            errFatal(err, "Failed to parse CPU")
             return cores
         }
         if cores, err := strconv.ParseFloat(cpu, 32); err == nil {
-            checkError(err)
+            errFatal(err, "Failed to parse CPU")
             return int(cores * 1000)
         }
     }
@@ -244,7 +36,7 @@ func parseMemory(resource ResourceList) int {
         if strings.HasSuffix(memory, "Ki") {
             mem := strings.TrimSuffix(memory, "Ki")
             m, err := strconv.Atoi(mem)
-            checkError(err)
+            errFatal(err, "Failed to parse Memory")
             return m
         }
     }
@@ -252,9 +44,18 @@ func parseMemory(resource ResourceList) int {
         if strings.HasSuffix(memory, "Mi") {
             mem := strings.TrimSuffix(memory, "Mi")
             m, err := strconv.Atoi(mem)
-            checkError(err)
+            errFatal(err, "Failed to parse Memory")
             return m * 1024
         }
+    }
+    return 0
+}
+
+func parsePod(resource ResourceList) int {
+    if pods, errs := resource["pods"]; errs {
+        p, err := strconv.Atoi(pods)
+        errFatal(err, "Failed to parse Pods")
+        return p
     }
     return 0
 }
@@ -282,14 +83,15 @@ func predicate(pod *Pod) ([]Node, error) {
         if p.Spec.NodeName == "" {
             continue
         }
+        ru := resourceUsage[p.Spec.NodeName]
         for _, c := range p.Spec.Containers {
-            cores := parseCpu(c.Resources.Requests)
+            cpu := parseCpu(c.Resources.Requests)
             memorys := parseMemory(c.Resources.Requests)
 
-            ru := resourceUsage[p.Spec.NodeName]
-            ru.CPU += cores
+            ru.CPU += cpu
             ru.Memory += memorys
         }
+        ru.Pod += 1
     }
 
     var nodes []Node
@@ -301,24 +103,28 @@ func predicate(pod *Pod) ([]Node, error) {
 
     // 统计待调度pod所需资源总量
     for _, c := range pod.Spec.Containers {
-        cores := parseCpu(c.Resources.Requests)
+        cpus := parseCpu(c.Resources.Requests)
         memorys := parseMemory(c.Resources.Requests)
 
-        resourceRequired.CPU += cores
+        resourceRequired.CPU += cpus
         resourceRequired.Memory += memorys
+        resourceRequired.Pod += 1
     }
 
     for _, node := range nodeList.Items {
         // resourceAllocatable 统计各个节点可分配资源总量
         resourceAllocatable.CPU = parseCpu(node.Status.Allocatable)
         resourceAllocatable.Memory = parseMemory(node.Status.Allocatable)
+        resourceAllocatable.Pod = parsePod(node.Status.Allocatable)
 
         // 统计各个节点可用空闲资源总量
         resourceFree.CPU = (resourceAllocatable.CPU - resourceUsage[node.Metadata.Name].CPU)
         resourceFree.Memory = (resourceAllocatable.Memory - resourceUsage[node.Metadata.Name].Memory)
-        fmt.Println(resourceAllocatable)
-        fmt.Println(resourceUsage[node.Metadata.Name])
-        fmt.Println(resourceFree)
+        resourceFree.Pod = (resourceAllocatable.Pod - resourceUsage[node.Metadata.Name].Pod)
+
+        printResourceUsage(resourceAllocatable, node, "Resource Allocatable")
+        printResourceUsage(*resourceUsage[node.Metadata.Name], node, "Resource Used")
+        printResourceUsage(resourceFree, node, "Resource Free")
 
         if resourceFree.CPU < resourceRequired.CPU {
             m := fmt.Sprintf("fit failure on node (%s): Insufficient CPU", node.Metadata.Name)
@@ -422,7 +228,8 @@ func bind(pod *Pod, node Node) error {
 Add Algorithm
 now it's choosed by ip
 */
-func bestNode(nodes []Node) (Node, error) {
+func priorities(nodes []Node) (Node, error) {
+
     type NodePrice struct {
         Node  Node
         Price float64
@@ -456,21 +263,4 @@ func bestNode(nodes []Node) (Node, error) {
         bestNodePrice = &NodePrice{nodes[0], 0}
     }
     return bestNodePrice.Node, nil
-}
-
-// 调度多个pod
-func schedulePods() error {
-    processorLock.Lock()
-    defer processorLock.Unlock()
-    pods, err := getUnscheduledPods()
-    if err != nil {
-        return err
-    }
-    for _, pod := range pods {
-        err := schedulePod(pod)
-        if err != nil {
-            log.Println(err)
-        }
-    }
-    return nil
 }

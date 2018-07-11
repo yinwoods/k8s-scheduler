@@ -1,46 +1,55 @@
 package main
 
 type UPS struct {
-    ID int
-    PowerRating string
-    PowerSupplyMethod string
-    RunningState string
-    SystemGrant string
-    SystemType string
-    DeviceTemperature string
-    WorkMode string
-    In Input
-    Out Output
-    Battery Battery
-    Environment Environment
+	ID                int    // 标识符
+	PowerRating       int    // 额定功率
+	PowerSupplyMethod int    // 供电方式
+	RunningState      int    // 额定功率
+	SystemGrant       int    // 机型容量
+	SystemType        string // 系统型号
+	WorkMode          int    // 工作模式
+	In                Input
+	Out               Output
+	Battery           Battery
+	Environment       Environment
+}
+
+type REF struct {
+	ID                int    // 标识符
+	PowerRating       int    // 额定功率
+	PowerSupplyMethod int    // 供电方式
+	RunningState      int    // 额定功率
+	SystemGrant       int    // 机型容量
+	SystemType        string // 系统型号
+	WorkMode          int    // 工作模式
+	In                Input
+	Out               Output
+	Battery           Battery
+	Environment       Environment
 }
 
 type Environment struct {
-    Temperature string
-    Humidty string
+	Temperature int // 环境温度
+	Humidty     int // 环境湿度
 }
 
 type Input struct {
-    PowerFactor float64
-    Frequency string
+	PowerFactor int // 输入功率因数
+	Frequency   int //  输入频率
 }
 
 type Output struct {
-    Voltage string
-    Current string
-    Crequerycy string
-    PowerRating string
+	Voltage     int // 电压
+	Current     int // 电流
+	Crequerycy  int // 输出频率
+	PowerRating int // 额定功率
 }
 
 type Battery struct {
-    State string
-    Voltage string
-    Current string
-    Temperature string
-    BackupTime string
-    CapacityLeft string
-}
-
-type Refrigeration struct {
-    // TODO
+	State        string // 状态
+	Voltage      int    // 电压
+	Current      int    // 电流
+	Temperature  int    // 温度
+	BackupTime   int    // 后备时间
+	CapacityLeft int    // 剩余容量
 }

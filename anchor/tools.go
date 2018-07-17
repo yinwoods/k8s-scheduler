@@ -116,8 +116,7 @@ func errFatal(err error, msg string) {
 
 func errPrintln(err error, msg string) {
     if err != nil {
-        log.Println(msg)
-        log.Println(err)
+        log.Println(msg, err)
     }
 }
 
@@ -126,8 +125,8 @@ func printResourceUsage(ru ResourceUsage, node *Node, msg string) {
     log.Printf("CPU: [%d] Memory: [%d] Pod: [%d]\n", ru.CPU, ru.Memory, ru.Pod)
 }
 
-func printNodeScores(nodeScore map[*Node]int64) {
+func printNodeScores(nodeScore map[*Node]float64) {
     for node, score := range nodeScore {
-        log.Printf("node [%s] got score: [%d]\n", node.Metadata.Name, score)
+        log.Printf("node [%s] got score: [%f]\n", node.Metadata.Name, score)
     }
 }

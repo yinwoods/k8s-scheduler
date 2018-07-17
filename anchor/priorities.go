@@ -2,7 +2,7 @@ package main
 
 const MaxPriority = 10
 
-func balancedResourceScore(requested, allocatable ResourceUsage) int64 {
+func balancedResourceScore(requested, allocatable ResourceUsage) float64 {
     cFraction := fractionOfCapacity(requested.CPU, allocatable.CPU)
     mFraction := fractionOfCapacity(requested.Memory, allocatable.Memory)
     pFraction := fractionOfCapacity(requested.Pod, allocatable.Pod)
@@ -14,7 +14,7 @@ func balancedResourceScore(requested, allocatable ResourceUsage) int64 {
     return getBalancedResourceScore(cFraction, mFraction, pFraction)
 }
 
-func leastRequestedScore(requested, allocatable ResourceUsage) int64 {
+func leastRequestedScore(requested, allocatable ResourceUsage) float64 {
     cRatio := getLeastRequestedScore(requested.CPU, allocatable.CPU)
     mRatio := getLeastRequestedScore(requested.Memory, allocatable.Memory)
     pRatio := getLeastRequestedScore(requested.Pod, allocatable.Pod)
@@ -25,7 +25,7 @@ func leastRequestedScore(requested, allocatable ResourceUsage) int64 {
 func priorities(pod *Pod, nodes []*Node) (*Node, error) {
 
     var bestNode *Node
-    nodeScore := make(map[*Node]int64)
+    nodeScore := make(map[*Node]float64)
 
     // 获取所有节点
     nodeList, err := getNodes()
@@ -46,18 +46,15 @@ func priorities(pod *Pod, nodes []*Node) (*Node, error) {
 
         allocatable := allocatableResource(node, used)
         nodeScore[node] += balancedResourceScore(requested, allocatable)
-        printNodeScores(nodeScore)
 
         nodeScore[node] += leastRequestedScore(requested, allocatable)
-        printNodeScores(nodeScore)
 
         nodeScore[node] /= 2
-        printNodeScores(nodeScore)
     }
 
     printNodeScores(nodeScore)
 
-    var maxScore int64 = 0
+    var maxScore float64 = 0
     for node, score := range nodeScore {
         if score > maxScore {
             maxScore = score

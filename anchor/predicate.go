@@ -55,9 +55,9 @@ func parsePod(resource ResourceList) int64 {
 // 统计节点上可分配资源总量
 func allocatableResource(node *Node, used map[string]*ResourceUsage) ResourceUsage {
     var tr ResourceUsage
-    tr.CPU = parseCpu(node.Status.Allocatable)
-    tr.Memory = parseMemory(node.Status.Allocatable)
-    tr.Pod = parsePod(node.Status.Allocatable)
+    tr.CPU = parseCpu(node.Status.Capacity)
+    tr.Memory = parseMemory(node.Status.Capacity)
+    tr.Pod = parsePod(node.Status.Capacity)
 
     var allocatable ResourceUsage
     allocatable.CPU = tr.CPU - used[node.Metadata.Name].CPU
@@ -120,18 +120,16 @@ func predicate(pod *Pod) ([]*Node, error) {
 
     var requested ResourceUsage
     var allocatable ResourceUsage
-    var total ResourceUsage
 
     // 统计待调度pod所需资源总量
     requested = requestedResource(pod)
 
     for _, node := range nodeList.Items {
-        // total 统计各个节点可分配资源总量
+        // allocatable 统计各个节点可分配资源总量
         allocatable = allocatableResource(node, used)
 
-        printResourceUsage(total, node, "Resource Allocatable")
+        printResourceUsage(allocatable, node, "Resource Allocatable")
         printResourceUsage(*used[node.Metadata.Name], node, "Resource Used")
-        printResourceUsage(allocatable, node, "Resource Free")
 
         if allocatable.CPU < requested.CPU {
             m := fmt.Sprintf("fit failure on node (%s): Insufficient CPU", node.Metadata.Name)
